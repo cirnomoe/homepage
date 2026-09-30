@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="description" content="cirno@rime.moe - Crystalline sanctuary, subcooled physics, eBPF & isolated autonomous network.">
+  <title>cirno@rime.moe: ~ (zsh)</title>
+  <style>
+    /* ==========================================================================
+       Nord / Deep Ice Theme Design System
+       ========================================================================== */
+    :root {
+      --bg-color: #0d1117;
+      --card-bg: rgba(22, 27, 34, 0.95);
+      --card-border: rgba(125, 207, 255, 0.18);
+      --card-glow: rgba(125, 207, 255, 0.07);
+
+      --text-white: #e6edf3;
+      --text-muted: #8b949e;
+      --text-cyan: #7dcfff;
+      --text-blue: #79c0ff;
+      --text-green: #7ee787;
+      --text-teal: #56d4dd;
+      --text-red: #ff7b72;
+      --text-yellow: #ffbd2e;
+
+      --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", Menlo, Monaco, Consolas, "Courier New", monospace;
+      --terminal-radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background-color: var(--bg-color);
+      font-family: var(--font-mono);
+      color: var(--text-white);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    /* Ambient Background Effects */
+    #frost-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .ambient-grid {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      background:
+        radial-gradient(circle at 50% 12%, rgba(125, 207, 255, 0.08) 0%, transparent 60%),
+        radial-gradient(circle at 85% 85%, rgba(86, 212, 221, 0.04) 0%, transparent 50%),
+        linear-gradient(rgba(125, 207, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(125, 207, 255, 0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+    }
+
+    .vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Main Terminal Shell */
+    .terminal-container {
+      position: relative;
+      z-index: 3;
+      width: min(940px, calc(100vw - 32px));
+      height: min(650px, calc(100dvh - 32px));
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .terminal-container.fullscreen {
+      width: 100vw;
+      height: 100dvh;
+      border-radius: 0;
+    }
+
+    .terminal-container.minimized .terminal-body,
+    .terminal-container.minimized .quick-chips-bar {
+      display: none;
+    }
+
+    .terminal-container.minimized {
+      height: auto;
+    }
+
+    .terminal-card {
+      width: 100%;
+      height: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--terminal-radius);
+      box-shadow:
+        0 24px 60px -12px rgba(0, 0, 0, 0.8),
+        0 0 35px var(--card-glow);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .terminal-container.fullscreen .terminal-card {
+      border-radius: 0;
+      border: none;
+    }
+
+    /* macOS Window Header Bar */
+    .terminal-header {
+      height: 40px;
+      min-height: 40px;
+      background: rgba(13, 17, 23, 0.88);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      user-select: none;
+    }
+
+    .traffic-lights {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 80px;
+    }
+
+    .light-btn {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      display: inline-block;
+      padding: 0;
+      transition: transform 0.15s ease, filter 0.15s ease;
+      outline: none;
+    }
+
+    .light-btn:hover {
+      filter: brightness(1.2);
+      transform: scale(1.12);
+    }
+
+    .light-btn.close { background-color: #ff5f56; }
+    .light-btn.min { background-color: #ffbd2e; }
+    .light-btn.max { background-color: #27c93f; }
+
+    .terminal-title {
+      font-size: 13px;
+      color: var(--text-muted);
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 500;
+    }
+
+    .telemetry-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 80px;
+      justify-content: flex-end;
+      font-size: 11px;
+      color: var(--text-cyan);
+    }
+
+    .telemetry-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: var(--text-cyan);
+      box-shadow: 0 0 8px var(--text-cyan);
+      animation: pulse-dot 2.5s infinite ease-in-out;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 0.45; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    /* Terminal Output & Stream Body */
+    .terminal-body {
+      flex: 1;
+      padding: 18px 22px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      font-size: 13.5px;
+      line-height: 1.6;
+      cursor: text;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(125, 207, 255, 0.2) transparent;
+      scroll-behavior: smooth;
+    }
+
+    .terminal-body::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .terminal-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .terminal-body::-webkit-scrollbar-thumb {
+      background: rgba(125, 207, 255, 0.18);
+      border-radius: 4px;
+    }
+
+    .terminal-body::-webkit-scrollbar-thumb:hover {
+      background: rgba(125, 207, 255, 0.38);
+    }
+
+    /* Terminal Content Typographies */
+    .terminal-line {
+      margin-bottom: 5px;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .ascii-banner {
+      font-family: inherit;
+      font-size: clamp(7.5px, 2.2vw, 12px);
+      line-height: 1.15;
+      color: var(--text-cyan);
+      text-shadow: 0 0 12px rgba(125, 207, 255, 0.4);
+      white-space: pre;
+      margin: 4px 0 12px 0;
+      user-select: text;
+      overflow-x: auto;
+    }
+
+    .boot-log {
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .boot-log .log-time {
+      color: var(--text-blue);
+      margin-right: 6px;
+    }
+
+    .boot-log .log-highlight {
+      color: var(--text-cyan);
+    }
+
+    .welcome-tip {
+      color: var(--text-white);
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px dashed rgba(125, 207, 255, 0.16);
+      font-size: 13px;
+    }
+
+    .prompt {
+      display: inline;
+      user-select: none;
+      font-weight: 600;
+    }
+
+    .prompt-user { color: var(--text-blue); }
+    .prompt-sep { color: var(--text-muted); }
+    .prompt-path { color: var(--text-green); }
+    .prompt-symbol { color: var(--text-cyan); margin-right: 8px; }
+
+    .cmd-executed {
+      color: #ffffff;
+      font-weight: 500;
+    }
+
+    .output-block {
+      margin: 4px 0 14px 0;
+      color: var(--text-white);
+    }
+
+    .output-cyan { color: var(--text-cyan); }
+    .output-muted { color: var(--text-muted); }
+    .output-blue { color: var(--text-blue); }
+    .output-green { color: var(--text-green); }
+    .output-red { color: var(--text-red); }
+    .output-yellow { color: var(--text-yellow); }
+
+    .terminal-link {
+      color: var(--text-teal);
+      text-decoration: none;
+      border-bottom: 1px dashed rgba(86, 212, 221, 0.45);
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .terminal-link:hover {
+      color: #ffffff;
+      border-bottom-color: #ffffff;
+      text-shadow: 0 0 8px rgba(86, 212, 221, 0.85);
+    }
+
+    /* Active Input Line Container */
+    .input-line {
+      position: relative;
+      display: flex;
+      align-items: baseline;
+      min-height: 24px;
+      cursor: text;
+    }
+
+    .input-line-inner {
+      display: inline-flex;
+      align-items: baseline;
+      flex: 1;
+      position: relative;
+    }
+
+    .display-text {
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: #ffffff;
+    }
+
+    /* True Terminal Inverted Solid Block Cursor with Blink Animation */
+    .block-cursor {
+      display: inline-block;
+      min-width: 0.55em;
+      height: 1.16em;
+      background-color: var(--text-cyan);
+      color: var(--bg-color);
+      vertical-align: -0.16em;
+      margin: 0 1px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.16em;
+      box-shadow: 0 0 8px rgba(125, 207, 255, 0.7);
+      animation: blink 1s step-end infinite;
+      user-select: none;
+    }
+
+    .block-cursor.typing {
+      animation: none;
+      opacity: 1;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* Real Invisible Input Element */
+    .cli-input {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      color: transparent;
+      background: transparent;
+      border: none;
+      outline: none;
+      caret-color: transparent;
+      /* CRITICAL: Must be at least 16px to prevent iOS Safari auto-zooming */
+      font-size: 16px !important;
+      font-family: inherit;
+      padding: 0;
+      margin: 0;
+      z-index: 2;
+    }
+
+    /* Quick Chips Bar */
+    .quick-chips-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      white-space: nowrap;
+      padding: 10px 16px;
+      background: rgba(13, 17, 23, 0.96);
+      border-top: 1px solid rgba(125, 207, 255, 0.12);
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      user-select: none;
+    }
+
+    .quick-chips-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chips-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      margin-right: 4px;
+      flex-shrink: 0;
+    }
+
+    .chip {
+      background: rgba(125, 207, 255, 0.08);
+      border: 1px solid rgba(125, 207, 255, 0.22);
+      color: var(--text-cyan);
+      font-family: inherit;
+      font-size: 12px;
+      padding: 5px 13px;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.15s ease-out;
+      flex-shrink: 0;
+      outline: none;
+    }
+
+    .chip:hover {
+      background: rgba(125, 207, 255, 0.22);
+      border-color: var(--text-blue);
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(125, 207, 255, 0.38);
+      transform: translateY(-1px);
+    }
+
+    .chip:active {
+      transform: translateY(1px);
+      background: rgba(125, 207, 255, 0.32);
+    }
+
+    /* JSON & Key-Value Syntax Highlighting */
+    .json-key { color: var(--text-blue); }
+    .json-string { color: var(--text-green); }
+    .json-bracket { color: var(--text-muted); }
+
+    /* Responsive Adaptation for Mobile */
+    @media (max-width: 640px) {
+      .terminal-container {
+        width: 100vw;
+        height: 100dvh;
+        border-radius: 0;
+      }
+
+      .terminal-card {
+        border-radius: 0;
+        border: none;
+      }
+
+      .terminal-body {
+        padding: 12px 14px;
+        font-size: 12.5px;
+      }
+
+      .quick-chips-bar {
+        padding: 8px 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Ambient cyber background with subtle frost particles & grid -->
+  <canvas id="frost-canvas"></canvas>
+  <div class="ambient-grid"></div>
+  <div class="vignette"></div>
+
+  <!-- Main Terminal Application -->
+  <div class="terminal-container" id="terminal-container">
+    <div class="terminal-card">
+      <!-- Top Title Bar -->
+      <header class="terminal-header">
+        <div class="traffic-lights">
+          <button class="light-btn close" id="btn-close" title="Close / Suspend"></button>
+          <button class="light-btn min" id="btn-min" title="Minimize"></button>
+          <button class="light-btn max" id="btn-max" title="Full Screen"></button>
+        </div>
+        <div class="terminal-title">cirno@rime.moe: ~ (zsh)</div>
+        <div class="telemetry-indicator" title="Thermal Equilibrium">
+          <span class="telemetry-dot"></span>
+          <span>0.00 K</span>
+        </div>
+      </header>
+
+      <!-- Terminal Output & Interactive Stream -->
+      <main class="terminal-body" id="terminal-body">
+        <div id="history-stream"></div>
+
+        <!-- Real-time Active Prompt & Input -->
+        <div class="input-line" id="active-line">
+          <span class="prompt">
+            <span class="prompt-user">cirno@rime.moe</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-symbol">$</span>
+          </span>
+          <div class="input-line-inner">
+            <span class="display-text" id="display-before"></span><span class="block-cursor" id="block-cursor">&nbsp;</span><span class="display-text" id="display-after"></span>
+            <input 
+              type="text" 
+              id="cli-input" 
+              class="cli-input" 
+              autofocus 
+              autocomplete="off" 
+              autocorrect="off" 
+              autocapitalize="off" 
+              spellcheck="false" 
+            />
+          </div>
+        </div>
+      </main>
+
+      <!-- Bottom Quick Chips Bar -->
+      <footer class="quick-chips-bar" id="quick-chips-bar">
+        <span class="chips-label">QUICK //</span>
+        <button class="chip" data-cmd="help">help</button>
+        <button class="chip" data-cmd="about">about</button>
+        <button class="chip" data-cmd="skills">skills</button>
+        <button class="chip" data-cmd="status">status</button>
+        <button class="chip" data-cmd="links">links</button>
+        <button class="chip" data-cmd="ls">ls</button>
+        <button class="chip" data-cmd="whoami">whoami</button>
+        <button class="chip" data-cmd="cirno">cirno (⑨)</button>
+        <button class="chip" data-cmd="date">date</button>
+        <button class="chip" data-cmd="clear">clear</button>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // --- Subtle Ambient Frost Particle Background ---
+      const canvas = document.getElementById('frost-canvas');
+      const ctx = canvas.getContext('2d');
+      let particles = [];
+
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+
+      const PARTICLE_COUNT = 32;
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        particles.push({
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          radius: Math.random() * 1.5 + 0.5,
+          speedY: Math.random() * 0.25 + 0.08,
+          speedX: (Math.random() - 0.5) * 0.15,
+          alpha: Math.random() * 0.4 + 0.1
+        });
+      }
+
+      function renderFrost() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#7dcfff';
+
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.globalAlpha = p.alpha;
+          ctx.fill();
+
+          p.y += p.speedY;
+          p.x += p.speedX;
+
+          if (p.y > canvas.height) {
+            p.y = -5;
+            p.x = Math.random() * canvas.width;
+          }
+          if (p.x > canvas.width) p.x = 0;
+          if (p.x < 0) p.x = canvas.width;
+        }
+
+        ctx.globalAlpha = 1.0;
+        requestAnimationFrame(renderFrost);
+      }
+      requestAnimationFrame(renderFrost);
+
+      // --- DOM Elements ---
+      const terminalContainer = document.getElementById('terminal-container');
+      const terminalBody = document.getElementById('terminal-body');
+      const historyStream = document.getElementById('history-stream');
+      const cliInput = document.getElementById('cli-input');
+      const displayBefore = document.getElementById('display-before');
+      const displayAfter = document.getElementById('display-after');
+      const blockCursor = document.getElementById('block-cursor');
+      const quickChipsBar = document.getElementById('quick-chips-bar');
+
+      const btnClose = document.getElementById('btn-close');
+      const btnMin = document.getElementById('btn-min');
+      const btnMax = document.getElementById('btn-max');
+
+      // --- State ---
+      const commandHistory = [];
+      let historyIndex = -1;
+      let currentDraft = '';
+      let isSuspended = false;
+      let typingTimer = null;
+
+      // Available commands for auto-completion
+      const AVAILABLE_COMMANDS = [
+        'help',
+        'about',
+        'skills',
+        'tech',
+        'status',
+        'links',
+        'cirno',
+        '9',
+        'date',
+        'ls',
+        'cat',
+        'whoami',
+        'uname',
+        'hostname',
+        'uptime',
+        'ping',
+        'echo',
+        'history',
+        'reboot',
+        'clear',
+        'sudo'
+      ];
+
+      // Virtual File System (In-Memory Cryogenic Refuge)
+      const VIRTUAL_FS = {
+        'about.md': `### CIRNO MOE (雾凇 / cirnomoe)
+"Subcooled until disturbed."
+Stateless refuge amidst modern web bloat: deterministic, low entropy, and immutable.`,
+        'philosophy.txt': `In physical chemistry, a subcooled liquid remains liquid below its freezing point.
+Quiescent, noiseless, pure. The slightest crystallization nucleus triggers instantaneous phase transition into crystalline rime.`,
+        'kernel.bpf': `#include <vmlinux.h>
+#include <bpf/bpf_helpers.h>
+
+SEC("tc_ingress")
+int filter_noise(struct __sk_buff *skb) {
+    // Drop all incoming unsolicited packets; preserve absolute zero
+    return TC_ACT_SHOT;
+}
+char LICENSE[] SEC("license") = "Dual MIT/GPL";`,
+        'sanctuary.conf': `[network]
+mode = isolated
+as_number = 65530
+temperature = 0.000K
+state = immutable
+firewall = default-drop`,
+        'banner.txt': `CRYSTALLINE SANCTUARY • ISOLATED SUBNET • 0.00 KELVIN`
+      };
+
+      // --- Helper Utilities ---
+      function escapeHtml(text) {
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function scrollToBottom() {
+        requestAnimationFrame(() => {
+          terminalBody.scrollTop = terminalBody.scrollHeight;
+        });
+      }
+
+      function focusCli() {
+        if (!isSuspended) {
+          cliInput.focus();
+        }
+      }
+
+      function syncDisplay() {
+        const val = cliInput.value;
+        const selStart = cliInput.selectionStart ?? val.length;
+        const charAtCursor = val.slice(selStart, selStart + 1);
+
+        displayBefore.textContent = val.slice(0, selStart);
+
+        if (charAtCursor) {
+          // Inverted display of character directly under block cursor
+          blockCursor.textContent = charAtCursor;
+          displayAfter.textContent = val.slice(selStart + 1);
+        } else {
+          // At end of line: block cursor renders non-breaking space
+          blockCursor.innerHTML = '&nbsp;';
+          displayAfter.textContent = '';
+        }
+
+        // Keep cursor solidly visible while typing
+        blockCursor.classList.add('typing');
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(() => {
+          blockCursor.classList.remove('typing');
+        }, 500);
+      }
+
+      // --- Command Implementations ---
+      const COMMANDS = {
+        help: function () {
+          return `<div class="output-block">
+<span class="output-cyan">[ IDENTITY &amp; NAVIGATION ]</span>
+  <span class="output-green">about</span>       Identity, subcooling philosophy &amp; cyber sanctuary
+  <span class="output-green">skills</span>      Technical stack (Kernel, eBPF, BGP routing, minimal design)
+  <span class="output-green">status</span>      Cryogenic system telemetry &amp; security metrics
+  <span class="output-green">links</span>       External transmission coordinates (GitHub, domain, PGP)
+  <span class="output-green">cirno</span>       Summon ice fairy ⑨ (The Strongest) [alias: 9]
+  <span class="output-green">date</span>        Atomic timestamp &amp; client chronological reference
+
+<span class="output-cyan">[ VIRTUAL LINUX SHELL UTILITIES ]</span>
+  <span class="output-green">ls</span>          List virtual filesystem (try "ls -la")
+  <span class="output-green">cat &lt;file&gt;</span>  Read virtual file (e.g. "cat kernel.bpf", "cat about.md")
+  <span class="output-green">whoami</span>      Print current user identity and kernel capabilities
+  <span class="output-green">uname</span>       Print system information (try "uname -a")
+  <span class="output-green">hostname</span>    Print network node hostname
+  <span class="output-green">uptime</span>      Show uptime and system cryogenic load
+  <span class="output-green">ping &lt;host&gt;</span> Probe network boundary with eBPF drop emulation
+  <span class="output-green">echo &lt;text&gt;</span> Print text argument to standard output
+  <span class="output-green">history</span>     Display execution command history list
+  <span class="output-green">reboot</span>      Reload system boot sequence and crystalline banner
+  <span class="output-green">clear</span>       Flush terminal history buffer (or Ctrl+L)
+  <span class="output-green">help</span>        Display this command manifest
+
+<span class="output-muted">Tip: Press [Tab] to auto-complete commands and filenames!</span></div>`;
+        },
+
+        about: function () {
+          return `<div class="output-block">
+<span class="output-cyan">========================================================</span>
+  <span class="output-white" style="font-weight: 700;">CIRNO MOE (雾凇 / cirnomoe)</span>
+  <span class="output-muted">"Subcooled until disturbed."</span>
+<span class="output-cyan">========================================================</span>
+
+[ <span class="output-cyan">The Subcooled Sanctuary</span> ]
+  In physical chemistry, a subcooled liquid remains liquid below its
+  freezing point in a metastable state—quiescent, noiseless, and pure.
+  The slightest crystallization nucleus triggers an instantaneous
+  phase transition into crystalline rime.
+
+  This cyber node is an isolated refuge amidst modern web bloat:
+  stateless, deterministic, and immutable.
+
+[ <span class="output-cyan">Philosophical Vector</span> ]
+  • <span class="output-green">Low Entropy:</span> High signal-to-noise ratio; zero extraneous dependencies.
+  • <span class="output-green">Statelessness:</span> Volatile memory over persistent baggage (root on tmpfs).
+  • <span class="output-green">Self-Containment:</span> Physical air-gaps &amp; eBPF-driven boundary control.</div>`;
+        },
+
+        skills: function () {
+          return `<div class="output-block">
+<span class="output-cyan">SYSTEM CAPABILITIES &amp; TECH STACK:</span>
+
+[ <span class="output-blue">01. KERNEL &amp; LOW-LEVEL ARCHITECTURE</span> ]
+  • Linux Kernel internals (Zen / Hardened, PREEMPT_DYNAMIC, sysctl hardening)
+  • eBPF / XDP: Programmable packet filters, tracepoints &amp; kernel telemetry
+  • Systems Programming: Modern C, memory-safe Rust, POSIX shell discipline
+
+[ <span class="output-blue">02. NETWORKING &amp; DEFENSIVE ROUTING</span> ]
+  • <span class="output-cyan">dae:</span> High-performance eBPF transparent proxy &amp; traffic steering
+  • <span class="output-cyan">BGP Anycast:</span> Bird2 routing daemon, isolated Autonomous Systems (AS65530)
+  • <span class="output-cyan">Zero Trust:</span> WireGuard mesh networks, default-drop ingress, physical air-gaps
+
+[ <span class="output-blue">03. INFRASTRUCTURE &amp; PARADIGMS</span> ]
+  • Declarative OS: NixOS / Stateless Arch Linux with ephemeral tmpfs root
+  • MicroVMs, container isolation, reproducible build provenance
+  • Cryogenic physics aesthetics: absolute zero minimalism</div>`;
+        },
+
+        tech: function () {
+          return COMMANDS.skills();
+        },
+
+        status: function () {
+          return `<div class="output-block">
+<span class="json-bracket">{</span>
+  <span class="json-key">"node"</span>: <span class="json-string">"rime-sanctuary-01.local"</span>,
+  <span class="json-key">"core_temperature"</span>: <span class="json-string">"-273.150 °C (0.000 Kelvin)"</span>,
+  <span class="json-key">"phase_state"</span>: <span class="json-string">"Bose-Einstein Condensate (BEC)"</span>,
+  <span class="json-key">"entropy_level"</span>: <span class="json-string">"0.0000000000 J/K (Ground State)"</span>,
+  <span class="json-key">"kernel_version"</span>: <span class="json-string">"Linux 6.12.9-zen-rime #1 SMP PREEMPT_DYNAMIC"</span>,
+  <span class="json-key">"firewall_policy"</span>: <span class="json-string">"DEFAULT DROP ALL INCOMING"</span>,
+  <span class="json-key">"ebpf_engine"</span>: <span class="json-string">"ATTACHED [xdp_drop_noise, tc_rime_egress]"</span>,
+  <span class="json-key">"routing_mode"</span>: <span class="json-string">"BGP Isolated AS65530 + dae eBPF proxy"</span>,
+  <span class="json-key">"memory_footprint"</span>: <span class="json-string">"0K / 0K (Frozen in tmpfs)"</span>,
+  <span class="json-key">"system_status"</span>: <span class="json-string">"SUBCOOLED &amp; IMMUTABLE"</span>
+<span class="json-bracket">}</span></div>`;
+        },
+
+        links: function () {
+          return `<div class="output-block">
+<span class="output-cyan">TRANSMISSION NODES &amp; COORDINATES:</span>
+
+  • <span class="output-blue">GitHub:</span>     <a class="terminal-link" href="https://github.com/cirnomoe" target="_blank" rel="noopener noreferrer">https://github.com/cirnomoe</a>
+  • <span class="output-blue">Domain:</span>     <a class="terminal-link" href="https://rime.moe" target="_blank" rel="noopener noreferrer">https://rime.moe</a>
+  • <span class="output-blue">PGP Key:</span>    <span class="output-muted">9999 0000 FFFF 1CE0 C180 9999 (0xCRYOGENIC)</span></div>`;
+        },
+
+        ls: function (args) {
+          const isLong = args.includes('-l') || args.includes('-la') || args.includes('-al');
+          if (isLong) {
+            const rows = [
+              '<span class="output-muted">total 24</span>',
+              'drwxr-xr-x  2 cirno rime 4096 Sep 30 00:00 .',
+              'drwxr-xr-x  2 cirno rime 4096 Sep 30 00:00 ..',
+              ...Object.keys(VIRTUAL_FS).map(name => {
+                const size = String(VIRTUAL_FS[name].length).padStart(4, ' ');
+                return `-rw-r--r--  1 cirno rime ${size} Sep 30 00:00 <span class="output-cyan">${escapeHtml(name)}</span>`;
+              })
+            ];
+            return `<div class="output-block">${rows.join('\n')}</div>`;
+          }
+          const names = Object.keys(VIRTUAL_FS).map(name => `<span class="output-cyan">${escapeHtml(name)}</span>`).join('   ');
+          return `<div class="output-block">${names}</div>`;
+        },
+
+        cat: function (args) {
+          if (!args || args.length === 0) {
+            return `<div class="output-block output-red">cat: missing file operand. Try "ls" to view available files.</div>`;
+          }
+          const filename = args[0];
+          if (Object.prototype.hasOwnProperty.call(VIRTUAL_FS, filename)) {
+            return `<div class="output-block">${escapeHtml(VIRTUAL_FS[filename])}</div>`;
+          }
+          return `<div class="output-block output-red">cat: ${escapeHtml(filename)}: No such file or directory</div>`;
+        },
+
+        whoami: function () {
+          return `<div class="output-block"><span class="output-green">cirno</span> (uid=9999 gid=9999 groups=9999(rime),0(root) caps=[CAP_SUBCOOL,CAP_BPF_ADMIN])</div>`;
+        },
+
+        uname: function (args) {
+          const isAll = args.includes('-a') || args.includes('-all');
+          if (isAll) {
+            return `<div class="output-block">Linux rime-sanctuary 6.12.9-zen-rime #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux</div>`;
+          }
+          return `<div class="output-block">Linux</div>`;
+        },
+
+        hostname: function () {
+          return `<div class="output-block">rime-sanctuary-01.local</div>`;
+        },
+
+        uptime: function () {
+          return `<div class="output-block"> 00:09:09 up 999 days, 9:09, 1 user, load average: 0.00, 0.00, 0.00 (Frozen at 0K)</div>`;
+        },
+
+        echo: function (args) {
+          return `<div class="output-block">${escapeHtml(args.join(' '))}</div>`;
+        },
+
+        ping: function (args) {
+          const target = args[0] || 'rime.moe';
+          return `<div class="output-block">PING ${escapeHtml(target)} (127.0.0.1): 56 data bytes
+[<span class="output-cyan">eBPF/TC</span>] Ingress packet dropped by security policy (Air-Gapped Autonomous System AS65530).
+--- ${escapeHtml(target)} ping statistics ---
+1 packets transmitted, 0 packets received, <span class="output-yellow">100.0% packet loss</span></div>`;
+        },
+
+        history: function () {
+          if (commandHistory.length === 0) {
+            return `<div class="output-block output-muted">No commands recorded in this session.</div>`;
+          }
+          const lines = commandHistory.map((cmd, idx) => `  ${String(idx + 1).padStart(3, ' ')}  ${escapeHtml(cmd)}`);
+          return `<div class="output-block">${lines.join('\n')}</div>`;
+        },
+
+        reboot: function () {
+          historyStream.innerHTML = '';
+          printBootSequence();
+          return null;
+        },
+
+        cirno: function () {
+          return `<div class="output-block">
+<span class="output-cyan">
+          \\  ❄  /
+        --  (⑨)  --
+          /  ❄  \\
+</span>
+<span class="output-cyan" style="font-weight: 700;">  あたいったら最強ね！</span>
+<span class="output-muted">  "I am the strongest!"</span>
+
+  • <span class="output-blue">Entity:</span>        Ice Fairy of the Mist Lake (チルノ)
+  • <span class="output-blue">Ability:</span>       Manipulation of Cold &amp; Frost (冷気を操る程度の能力)
+  • <span class="output-blue">Intelligence:</span>  ⑨ (Infinite Thermodynamic Potential)
+  • <span class="output-blue">Spell Card:</span>    Ice Sign "Icicle Fall" (-Easy-)
+  • <span class="output-blue">Current State:</span> Instant freezing at 0.00 Kelvin</div>`;
+        },
+
+        '9': function () {
+          return COMMANDS.cirno();
+        },
+
+        date: function () {
+          const now = new Date();
+          const iso = now.toISOString();
+          const local = now.toString();
+          const epoch = Math.floor(now.getTime() / 1000);
+          return `<div class="output-block">
+  • <span class="output-blue">ISO 8601:</span>    <span class="output-cyan">${iso}</span>
+  • <span class="output-blue">Local Time:</span>  <span class="output-white">${escapeHtml(local)}</span>
+  • <span class="output-blue">UNIX Epoch:</span>  <span class="output-yellow">${epoch}</span>
+  • <span class="output-blue">Subcooled:</span>   <span class="output-green">0.000000 s since last disturbance</span></div>`;
+        },
+
+        clear: function () {
+          historyStream.innerHTML = '';
+          return null;
+        },
+
+        sudo: function () {
+          return `<div class="output-block output-red">
+Permission denied: user is stateless, immutable, and untouchable.
+Incident ⑨ reported to Cirno.</div>`;
+        }
+      };
+
+      // --- Execute Command Flow ---
+      function executeCommand(rawInput) {
+        const trimmed = rawInput.trim();
+        const cmdParts = trimmed.split(/\s+/);
+        const mainCmd = cmdParts[0].toLowerCase();
+
+        // 1. Render executed line to history stream
+        const historyLine = document.createElement('div');
+        historyLine.className = 'terminal-line';
+        historyLine.innerHTML = `<span class="prompt"><span class="prompt-user">cirno@rime.moe</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-symbol">$</span></span><span class="cmd-executed">${escapeHtml(rawInput)}</span>`;
+        historyStream.appendChild(historyLine);
+
+        // 2. Add to history buffer
+        if (trimmed.length > 0 && commandHistory[commandHistory.length - 1] !== trimmed) {
+          commandHistory.push(trimmed);
+        }
+        historyIndex = -1;
+        currentDraft = '';
+
+        // 3. Process command output
+        if (trimmed.length > 0) {
+          if (Object.prototype.hasOwnProperty.call(COMMANDS, mainCmd)) {
+            const resultHtml = COMMANDS[mainCmd](cmdParts.slice(1));
+            if (resultHtml !== null) {
+              const outputElem = document.createElement('div');
+              outputElem.innerHTML = resultHtml;
+              historyStream.appendChild(outputElem);
+            }
+          } else {
+            const notFound = document.createElement('div');
+            notFound.className = 'terminal-line output-red';
+            notFound.textContent = `command not found: ${mainCmd}. Type "help" for a list of commands.`;
+            historyStream.appendChild(notFound);
+          }
+        }
+
+        // 4. Reset input
+        cliInput.value = '';
+        syncDisplay();
+        scrollToBottom();
+      }
+
+      // --- Boot Sequence Output ---
+      function printBootSequence() {
+        const asciiArt = `  ____  ___ __  __ _____   __  __  ___  _____ 
+ |  _ \\|_ _|  \\/  | ____| |  \\/  |/ _ \\| ____|
+ | |_) || || |\\/| |  _|   | |\\/| | | | |  _|  
+ |  _ < | || |  | | |___  | |  | | |_| | |___ 
+ |_| \\_\\___|_|  |_|_____| |_|  |_|\\___/|_____|`;
+
+        const bootHtml = `
+<pre class="ascii-banner">${asciiArt}</pre>
+<div class="boot-log">
+  <div><span class="log-time">[    0.000000]</span>Linux version 6.12.9-zen-rime (cirno@gensokyo) #1 SMP PREEMPT_DYNAMIC</div>
+  <div><span class="log-time">[    0.000004]</span>Thermal Zone: Absolute Zero calibrated. Core temp: <span class="log-highlight">-273.150°C</span></div>
+  <div><span class="log-time">[    0.000012]</span>Memory: 0K / 0K active (State condensed into Bose-Einstein Condensate)</div>
+  <div><span class="log-time">[    0.000028]</span>eBPF: Subsystem active. dae transparent proxy attached to TC ingress/egress.</div>
+  <div><span class="log-time">[    0.000045]</span>BGP: AS65530 peering established with loopback ::1 (Isolated AS)</div>
+  <div><span class="log-time">[    0.000080]</span>Security: Air-gapped container initialized. Incoming packets dropped.</div>
+  <div><span class="log-time">[    0.000100]</span>RimeOS: All systems frozen. Subcooled until disturbed.</div>
+</div>
+<div class="welcome-tip">
+  Welcome to the crystalline sanctuary. Type <span class="output-cyan">"help"</span> or click the chips below to begin.
+</div>`;
+        historyStream.innerHTML = bootHtml;
+        scrollToBottom();
+      }
+
+      // --- Event Listeners ---
+
+      // 1. Text Selection Safeguard:
+      // Clicking empty terminal space focuses input UNLESS user is selecting text to copy
+      terminalBody.addEventListener('click', (e) => {
+        const selection = window.getSelection();
+        if (selection && selection.toString().length > 0) {
+          // User is highlighting text to copy; DO NOT steal focus
+          return;
+        }
+        if (e.target.closest('a, button, .chip')) {
+          return;
+        }
+        focusCli();
+      });
+
+      // 2. Real Input Keydown Handler
+      cliInput.addEventListener('keydown', (e) => {
+        // IME composition check: do not execute during Chinese / Japanese composition
+        if (e.isComposing || e.keyCode === 229) {
+          return;
+        }
+
+        // Ctrl + L -> Clear screen
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'l') {
+          e.preventDefault();
+          executeCommand('clear');
+          return;
+        }
+
+        // Ctrl + C -> Abort line
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+          e.preventDefault();
+          const historyLine = document.createElement('div');
+          historyLine.className = 'terminal-line';
+          historyLine.innerHTML = `<span class="prompt"><span class="prompt-user">cirno@rime.moe</span><span class="prompt-sep">:</span><span class="prompt-path">~</span><span class="prompt-symbol">$</span></span><span class="cmd-executed">${escapeHtml(cliInput.value)}^C</span>`;
+          historyStream.appendChild(historyLine);
+          cliInput.value = '';
+          currentDraft = '';
+          historyIndex = -1;
+          syncDisplay();
+          scrollToBottom();
+          return;
+        }
+
+        // Enter -> Execute
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          executeCommand(cliInput.value);
+          return;
+        }
+
+        // Up Arrow -> History back
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (commandHistory.length === 0) return;
+          if (historyIndex === -1) {
+            currentDraft = cliInput.value;
+            historyIndex = commandHistory.length - 1;
+          } else if (historyIndex > 0) {
+            historyIndex--;
+          }
+          cliInput.value = commandHistory[historyIndex] || '';
+          cliInput.selectionStart = cliInput.selectionEnd = cliInput.value.length;
+          syncDisplay();
+          return;
+        }
+
+        // Down Arrow -> History forward
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (historyIndex !== -1) {
+            if (historyIndex < commandHistory.length - 1) {
+              historyIndex++;
+              cliInput.value = commandHistory[historyIndex];
+            } else {
+              historyIndex = -1;
+              cliInput.value = currentDraft;
+            }
+            cliInput.selectionStart = cliInput.selectionEnd = cliInput.value.length;
+            syncDisplay();
+          }
+          return;
+        }
+
+        // Tab -> Auto-completion (Commands & Filenames)
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          const currentVal = cliInput.value.trimStart();
+          if (!currentVal) return;
+
+          // Context 1: Auto-complete filenames when typing "cat <file>"
+          if (currentVal.startsWith('cat ')) {
+            const prefix = currentVal.slice(4).trimStart();
+            const fileNames = Object.keys(VIRTUAL_FS);
+            const matches = fileNames.filter(fn => fn.startsWith(prefix));
+            if (matches.length === 1) {
+              cliInput.value = 'cat ' + matches[0] + ' ';
+              cliInput.selectionStart = cliInput.selectionEnd = cliInput.value.length;
+              syncDisplay();
+            } else if (matches.length > 1) {
+              const hintLine = document.createElement('div');
+              hintLine.className = 'terminal-line output-cyan';
+              hintLine.textContent = matches.join('   ');
+              historyStream.appendChild(hintLine);
+              scrollToBottom();
+            }
+            return;
+          }
+
+          // Context 2: Auto-complete command names
+          const matches = AVAILABLE_COMMANDS.filter(cmd => cmd.startsWith(currentVal.toLowerCase()));
+          if (matches.length === 1) {
+            cliInput.value = matches[0] + ' ';
+            cliInput.selectionStart = cliInput.selectionEnd = cliInput.value.length;
+            syncDisplay();
+          } else if (matches.length > 1) {
+            // Print match suggestions
+            const hintLine = document.createElement('div');
+            hintLine.className = 'terminal-line output-muted';
+            hintLine.textContent = matches.join('   ');
+            historyStream.appendChild(hintLine);
+            scrollToBottom();
+          }
+          return;
+        }
+
+        // Sync display after other keys
+        setTimeout(syncDisplay, 0);
+      });
+
+      cliInput.addEventListener('input', syncDisplay);
+      cliInput.addEventListener('keyup', syncDisplay);
+      cliInput.addEventListener('select', syncDisplay);
+      cliInput.addEventListener('compositionupdate', syncDisplay);
+      cliInput.addEventListener('compositionend', syncDisplay);
+
+      // 3. Quick Chips Handler
+      quickChipsBar.addEventListener('click', (e) => {
+        const btn = e.target.closest('.chip');
+        if (!btn) return;
+        const cmd = btn.getAttribute('data-cmd');
+        if (cmd) {
+          executeCommand(cmd);
+          focusCli();
+        }
+      });
+
+      // 4. macOS Traffic Lights Control
+      btnClose.addEventListener('click', () => {
+        isSuspended = !isSuspended;
+        if (isSuspended) {
+          historyStream.innerHTML += `<div class="terminal-line output-yellow">[Process suspended. Terminal in cryogenic hibernation. Click red dot to wake.]</div>`;
+          cliInput.blur();
+        } else {
+          historyStream.innerHTML += `<div class="terminal-line output-green">[Process resumed. Thermal equilibrium restored.]</div>`;
+          focusCli();
+        }
+        scrollToBottom();
+      });
+
+      btnMin.addEventListener('click', () => {
+        terminalContainer.classList.toggle('minimized');
+      });
+
+      btnMax.addEventListener('click', () => {
+        terminalContainer.classList.toggle('fullscreen');
+        scrollToBottom();
+      });
+
+      // Window resize re-centering
+      window.addEventListener('resize', scrollToBottom);
+
+      // --- Initialize ---
+      printBootSequence();
+      focusCli();
+      syncDisplay();
+    })();
+  </script>
+</body>
+</html>
